@@ -19,7 +19,7 @@ socket.on('state', (gameState) => {
     ball = gameState.ball;
     scores = gameState.scores;
     gameTime = gameState.time;
-    
+
     renderGame();
 });
 
@@ -73,6 +73,25 @@ function renderGame() {
     ctx.fillStyle = '#d3d3d3';
     ctx.fillRect(fieldX, fieldY, fieldWidth, fieldHeight);
 
+    // Draw center line
+    ctx.strokeStyle = 'black';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2, fieldY);
+    ctx.lineTo(canvas.width / 2, fieldY + fieldHeight);
+    ctx.stroke();
+
+    // Draw goals
+    ctx.fillStyle = 'green';
+    const goalWidth = 50;
+    const goalDepth = 10;
+
+    // Team 1 goal (left side)
+    ctx.fillRect(fieldX - goalWidth, fieldY + fieldHeight / 2 - goalDepth / 2, goalWidth, goalDepth);
+
+    // Team 2 goal (right side)
+    ctx.fillRect(fieldX + fieldWidth, fieldY + fieldHeight / 2 - goalDepth / 2, goalWidth, goalDepth);
+
     // Draw players
     players.forEach((player) => {
         ctx.fillStyle = player.team === 'team1' ? 'blue' : 'red';
@@ -88,7 +107,7 @@ function renderGame() {
     // Draw the scores and timer above the field
     ctx.fillStyle = 'black';
     ctx.font = '24px Arial';
-    const scoreText = `Team 1: ${scores.team1} | Timer: ${gameTime}s | Team 2: ${scores.team2}`;
+    const scoreText = `Blue Team: ${scores.team1} | ${gameTime}s | ${scores.team2} : Team Red`;
     ctx.fillText(scoreText, canvas.width / 2 - ctx.measureText(scoreText).width / 2, 30);  // Center the score text
 
     // Optional: Draw a boundary or goal lines (can be added based on your design)

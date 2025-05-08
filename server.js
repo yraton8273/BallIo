@@ -42,9 +42,38 @@ io.on('connection', (socket) => {
         gameState.ball.y += movement.dy;
     });
 
+    // Check if the ball has crossed a goal line
+    const checkGoal = () => {
+        // Goal dimensions
+        const goalWidth = 50;
+        const goalDepth = 10;
+
+        // Team 1 goal (left side)
+        if (gameState.ball.x <= 0 && gameState.ball.y > 300 - goalDepth && gameState.ball.y < 300 + goalDepth) {
+            gameState.scores.team2 += 1;  // Team 2 scores
+            resetBall();
+        }
+
+        // Team 2 goal (right side)
+        if (gameState.ball.x >= 800 && gameState.ball.y > 300 - goalDepth && gameState.ball.y < 300 + goalDepth) {
+            gameState.scores.team1 += 1;  // Team 1 scores
+            resetBall();
+        }
+    };
+
+    // Reset the ball position to the center after a goal
+    const resetBall = () => {
+        gameState.ball.x = 400;
+        gameState.ball.y = 300;
+        gameState.ball.attachedTo = null;
+    };
+
     // Game loop: send the updated game state every second
     const gameLoop = setInterval(() => {
         gameState.time += 1; // Increment time (every second)
+
+        // Check if a goal has been scored
+        checkGoal();
 
         io.emit('state', gameState); // Broadcast updated game state to all clients
     }, 1000);
