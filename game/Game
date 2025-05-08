@@ -1,0 +1,79 @@
+const Player = require('./Player');
+const Ball = require('./Ball');
+const Goal = require('./Goal');
+const Team = require('./Team');
+
+class Game {
+    constructor() {
+        this.teams = [];
+        this.players = {};
+        this.ball = new Ball();
+        this.goals = [
+            new Goal(0, 200, 20, 200, "Blue"),
+            new Goal(780, 200, 20, 200, "Red")
+        ];
+        this.timeElapsed = 0;
+        this.maxTime = 5 * 60 * 1000;
+    }
+
+    addUser(socketId) {
+        if (this.teams.length >= 2) return null;
+        const name = this.teams.length === 0 ? "Red" : "Blue";
+        const team = new Team(name, socketId);
+        for (let i = 0; i < 4; i++) {
+            const player = new Player(`${socketId}-${i}`, team);
+            team.addPlayer(player);
+            this.players[player.id] = player;
+        }
+        this.teams.push(team);
+        return team;
+    }
+
+    removeUser(socketId) {
+        this.teams = this.teams.filter(t => t.userSocketId !== socketId);
+        for (const id in this.players) {
+            if (id.startsWith(socketId)) {
+                delete this.players[id];
+            }
+        }
+    }
+
+    update(dt) {
+        this.timeElapsed += dt;
+
+        for (const id in this.players) {
+            this.players[id].updatePosition(dt);
+        }
+
+        this.ball.updatePosition(dt);
+
+        for (const goal of this.goals) {
+            if (goal.isBallInside(this.ball)) {
+                const scoringTeam = this.teams.find(t => t.name !== goal.teamName);
+                scoringTeam.score += 1;
+                console.log(`${scoringTeam.name} scores!`);
+                this.resetAfterGoal();
+                break;
+            }
+        }
+    }
+
+    resetAfterGoal() {
+        this.ball = new Ball();
+        for (const team of this.teams) {
+            team.players.forEach(p => {
+                p.x = Math.random() * 800;
+                p.y = Math.random() * 600;
+                p.vx = 0;
+                p.vy = 0;
+                p.hasBall = false;
+            });
+        }
+    }
+
+    isGameOver() {
+        return this.timeElapsed >= this.maxTime;
+    }
+}
+
+module.exports = Game;

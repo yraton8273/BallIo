@@ -1,0 +1,20 @@
+class Goal {
+    constructor(x, y, width, height, teamName) {
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.teamName = teamName;
+    }
+
+    isBallInside(ball) {
+        return (
+            ball.x >= this.x &&
+            ball.x <= this.x + this.width &&
+            ball.y >= this.y &&
+            ball.y <= this.y + this.height
+        );
+    }
+}
+
+module.exports = Goal;

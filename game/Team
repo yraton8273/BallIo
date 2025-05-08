@@ -1,0 +1,23 @@
+class Team {
+    constructor(name, userSocketId) {
+        this.name = name;
+        this.userSocketId = userSocketId;
+        this.players = [];
+        this.score = 0;
+        this.controlledIndex = 0;
+    }
+
+    addPlayer(player) {
+        this.players.push(player);
+    }
+
+    switchControl() {
+        this.controlledIndex = (this.controlledIndex + 1) % this.players.length;
+    }
+
+    getControlledPlayer() {
+        return this.players[this.controlledIndex];
+    }
+}
+
+module.exports = Team;

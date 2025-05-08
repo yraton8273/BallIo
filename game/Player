@@ -1,0 +1,24 @@
+class Player {
+    constructor(id, team) {
+        this.id = id;
+        this.team = team;
+        this.x = 0;
+        this.y = 0;
+        this.vx = 0;
+        this.vy = 0;
+        this.hasBall = false;
+        this.isPunching = false;
+        this.lastPunchTime = 0;
+    }
+
+    distanceTo(obj) {
+        return Math.hypot(this.x - obj.x, this.y - obj.y);
+    }
+
+    updatePosition(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+    }
+}
+
+module.exports = Player;
