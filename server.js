@@ -1,72 +1,63 @@
 const express = require('express');
 const http = require('http');
-const { Server } = require('socket.io');
-const Game = require('./game/Game');  // Make sure this path is correct based on your folder structure
+const socketIo = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
-const PORT = 3000;
+const io = socketIo(server);
 
-app.use(express.static('public'));  // Serve static files (client-side)
+// Initialize game state
+let gameState = {
+    players: [],
+    ball: { x: 400, y: 300, attachedTo: null },
+    scores: { team1: 0, team2: 0 },
+    time: 0 // Timer in seconds
+};
 
-const game = new Game();  // Create a new game instance
+// Serve static files (e.g., game.js, HTML, etc.)
+app.use(express.static('public'));
 
-// Handle socket connections
+// Handle incoming connections
 io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.id}`);
+    console.log('New client connected');
     
-    const team = game.addUser(socket.id);  // Add the user to the game
-    if (!team) {
-        socket.emit('full');
-        socket.disconnect();
-        return;
-    }
+    // Add a new player to the game
+    gameState.players.push({ id: socket.id, x: 200, y: 200, hasBall: false, team: 'team1' });
 
-    socket.emit('team_assigned', team.name);  // Notify player of their team
+    // Broadcast the initial game state
+    socket.emit('state', gameState);
 
-    // Handle player movement
-    socket.on('move', ({ vx, vy }) => {
-        const player = team.getControlledPlayer();
+    // Listen for player movement and update their position
+    socket.on('move', (movement) => {
+        const player = gameState.players.find(p => p.id === socket.id);
         if (player) {
-            player.vx = vx;
-            player.vy = vy;
+            player.x += movement.vx;
+            player.y += movement.vy;
         }
     });
 
-    // Switch player control
-    socket.on('switch_control', () => {
-        team.switchControl();
+    // Listen for ball movement (throwing)
+    socket.on('moveBall', (movement) => {
+        gameState.ball.x += movement.dx;
+        gameState.ball.y += movement.dy;
     });
 
-    // Handle disconnection
+    // Game loop: send the updated game state every second
+    const gameLoop = setInterval(() => {
+        gameState.time += 1; // Increment time (every second)
+
+        io.emit('state', gameState); // Broadcast updated game state to all clients
+    }, 1000);
+
+    // Clean up when a client disconnects
     socket.on('disconnect', () => {
-        console.log(`User disconnected: ${socket.id}`);
-        game.removeUser(socket.id);
+        console.log('Client disconnected');
+        gameState.players = gameState.players.filter(p => p.id !== socket.id);
+        clearInterval(gameLoop); // Stop the game loop for the disconnected client
     });
 });
 
-// Game loop (update every frame)
-const TICK_RATE = 60;
-setInterval(() => {
-    const dt = 1 / TICK_RATE;
-    game.update(dt);  // Update game state
-
-    // Broadcast game state to all connected clients
-    io.emit('state', {
-        players: Object.values(game.players).map(p => ({
-            id: p.id, x: p.x, y: p.y, hasBall: p.hasBall
-        })),
-        ball: {
-            x: game.ball.x,
-            y: game.ball.y,
-            attachedTo: game.ball.attachedTo
-        },
-        scores: game.teams.map(t => ({ name: t.name, score: t.score })),
-    });
-}, 1000 / TICK_RATE);  // Run at 60 FPS
-
 // Start the server
-server.listen(PORT, () => {
-    console.log(`⚽ Server running on http://localhost:${PORT}`);
+server.listen(3000, () => {
+    console.log('Server running on http://localhost:3000');
 });

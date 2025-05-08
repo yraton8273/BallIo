@@ -3,42 +3,43 @@ const socket = io();  // Connect to the server
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const CLOSE_DISTANCE = 50;  // Distance to interact with the ball (for player action)
-
-// Responsive canvas size: 100% width, 75% height
-function resizeCanvas() {
-    canvas.width = window.innerWidth * 0.9;   // 90% width (5% margin left & right)
-    canvas.height = window.innerHeight * 0.75; // 75% height
-}
-
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();  // Initial call
+// Set canvas size (full screen with field dimensions)
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
 // Game state variables
 let players = [];
 let ball = { x: 0, y: 0, attachedTo: null };
 let scores = { team1: 0, team2: 0 };
-let teamName = '';
+let gameTime = 0;
 
 // Handle server broadcast of game state
 socket.on('state', (gameState) => {
     players = gameState.players;
     ball = gameState.ball;
     scores = gameState.scores;
-
+    gameTime = gameState.time;
+    
     renderGame();
 });
 
-// Notify server of player movement
+// Handle player movement
 document.addEventListener('keydown', (event) => {
+    let movement = { vx: 0, vy: 0 };
+
     if (event.key === 'ArrowUp') {
-        socket.emit('move', { vx: 0, vy: -1 });
+        movement.vy = -5;
     } else if (event.key === 'ArrowDown') {
-        socket.emit('move', { vx: 0, vy: 1 });
+        movement.vy = 5;
     } else if (event.key === 'ArrowLeft') {
-        socket.emit('move', { vx: -1, vy: 0 });
+        movement.vx = -5;
     } else if (event.key === 'ArrowRight') {
-        socket.emit('move', { vx: 1, vy: 0 });
+        movement.vx = 5;
+    }
+
+    // Send movement data to the server
+    if (movement.vx !== 0 || movement.vy !== 0) {
+        socket.emit('move', movement);
     }
 });
 
@@ -53,6 +54,7 @@ canvas.addEventListener('click', (event) => {
         const directionY = mouseY - ball.y;
         const speed = 5;
 
+        // Send ball throw data to the server
         socket.emit('moveBall', { dx: directionX * speed, dy: directionY * speed });
     }
 });
@@ -61,21 +63,33 @@ canvas.addEventListener('click', (event) => {
 function renderGame() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);  // Clear previous frame
 
+    // Field dimensions (3/4 of screen height and full width minus borders)
+    const fieldWidth = canvas.width - 40;
+    const fieldHeight = canvas.height * 0.75;
+    const fieldX = 20;
+    const fieldY = (canvas.height - fieldHeight) / 2;
+
+    // Draw the field
+    ctx.fillStyle = '#d3d3d3';
+    ctx.fillRect(fieldX, fieldY, fieldWidth, fieldHeight);
+
     // Draw players
     players.forEach((player) => {
-        ctx.fillStyle = player.hasBall ? 'red' : 'blue';
-        ctx.fillRect(player.x, player.y, 30, 30);
+        ctx.fillStyle = player.team === 'team1' ? 'blue' : 'red';
+        ctx.fillRect(player.x, player.y, 30, 30); // Draw player as a 30x30 square
     });
 
     // Draw ball
     ctx.fillStyle = 'yellow';
     ctx.beginPath();
-    ctx.arc(ball.x, ball.y, 10, 0, Math.PI * 2);
+    ctx.arc(ball.x, ball.y, 10, 0, Math.PI * 2); // Draw ball as a circle
     ctx.fill();
 
-    // Draw scores
+    // Draw the scores and timer above the field
     ctx.fillStyle = 'black';
     ctx.font = '24px Arial';
-    ctx.fillText(`Team 1: ${scores.team1}`, 10, 30);
-    ctx.fillText(`Team 2: ${scores.team2}`, canvas.width - 100, 30);
+    const scoreText = `Team 1: ${scores.team1} | Timer: ${gameTime}s | Team 2: ${scores.team2}`;
+    ctx.fillText(scoreText, canvas.width / 2 - ctx.measureText(scoreText).width / 2, 30);  // Center the score text
+
+    // Optional: Draw a boundary or goal lines (can be added based on your design)
 }
